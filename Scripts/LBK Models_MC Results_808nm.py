@@ -337,7 +337,7 @@ if __name__ == "__main__":
     # Required STL files per subject (see TISSUE TABLE above):
     #   L3_raw.stl, L4_raw.stl, L5_raw.stl, S1_raw.stl,
     #   L3L4_disc_raw.stl, L4L5_disc_raw.stl, L5S1_disc_raw.stl
-    SUBJECT_IDS = []   # e.g. ["LBK001", "LBK002"]
+    SUBJECT_IDS = ["LBK001"]   # e.g. ["LBK001", "LBK002"]
 
     BASE_DIR   = Path(".")
     RUN_ID     = datetime.now().strftime("%Y%m%d_%H%M%S")
