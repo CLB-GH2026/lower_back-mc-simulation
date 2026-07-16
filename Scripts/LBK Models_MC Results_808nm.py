@@ -50,6 +50,7 @@ from pbm_mc_core import (
     optimize_source_positions_reciprocity,
     run_pmcx,
     analyze_fluence_absorption, analyze_penetration_depth, plot_depth_histogram,
+    target_depth_zone,
     results_to_csv, melanin_comparison_to_csv,
 )
 
@@ -94,7 +95,7 @@ AUTO_ORIENT   = True              # auto-correct Z-axis inversion (L3 above S1 c
 FLUENCE_OUTPUT = None             # None = run pmcx; path string = load saved .npy
 
 # ── Soft-tissue wrapping (mm) ─────────────────────────────────────────────────
-MUSCLE_THICK_MM  = 35   # paraspinal bulk (erector spinae + multifidus) at L4/L5
+MUSCLE_THICK_MM  = 30   # paraspinal (erector spinae + multifidus) at L4/L5; trimmed from 35 (isotropic wrap overestimates mean depth)
 ADIPOSE_THICK_MM =  8   # posterior subcutaneous fat - thicker than knee/shoulder
 SKIN_THICK_MM    =  2
 
@@ -118,7 +119,7 @@ GROUPS = {
     'Nucleus': lambda n: 'nucleus' in n,
     'Muscle':  lambda n: 'muscle'  in n,
     'Adipose': lambda n: 'adipose' in n,
-    'Skin':    lambda n: 'skin'    in n,
+    'Skin+Epidermis': lambda n: ('skin' in n) or ('epidermis' in n),
 }
 DOSE_GROUPS = {
     'Disc':    lambda n: 'disc'    in n,
@@ -278,10 +279,15 @@ def run_subject(subject_id, mesh_dir_base, output_dir, melanin_condition='fair')
         bin_centers, mean_flu, max_depth = analyze_penetration_depth(
             fluence_combined, vol, VOXEL_SIZE, mesh_center, origin
         )
+        # Data-driven dose zone from the actual target (disc/nucleus) depth.
+        z_lo, z_hi, z_med = target_depth_zone(vol, tissues, VOXEL_SIZE, TARGET_MATCH_FN)
+        if z_lo is None:
+            z_lo, z_hi, z_med = _LBK_ZONE_LO, _LBK_ZONE_HI, 0.5 * (_LBK_ZONE_LO + _LBK_ZONE_HI)
+        print(f"  Target depth zone: {z_lo:.2f}-{z_hi:.2f} cm (median {z_med:.2f} cm)")
         fig_depth = plot_depth_histogram(
             bin_centers, mean_flu, subject_id, WAVELENGTH_NM,
-            depth_refs=_LBK_DEPTH_REFS,
-            zone_lo=_LBK_ZONE_LO, zone_hi=_LBK_ZONE_HI,
+            depth_refs=[(z_med, 'Disc/nucleus (targets)')],
+            zone_lo=z_lo, zone_hi=z_hi,
             group_flu_mw={
                 'Disc': disc_flu_mw,
                 'Nucleus Pulposus': nucleus_flu_mw,
